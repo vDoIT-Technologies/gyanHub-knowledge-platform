@@ -1,0 +1,1 @@
+import{m as t}from"./index-I8_guHu9.js";const c=async a=>await t.get("/chat/fetch-sessions",{params:a}),n=async(a,s)=>await t.put(`/chat/sessions/${a}`,s),r=async a=>await t.delete(`/chat/sessions/${a}`),i=async()=>(await t.get("/chat/avatar-teachers")).data.data,o=async a=>(await t.get(`/chat/teacher-config/${a}`)).data.data;export{r as a,n as b,c,i as d,o as e};

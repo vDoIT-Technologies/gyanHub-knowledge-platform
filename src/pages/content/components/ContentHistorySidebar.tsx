@@ -143,9 +143,20 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { BookOpen, PanelLeftClose, Calendar, FileText, Loader2 } from 'lucide-react';
+import {
+  BookOpen,
+  PanelLeftClose,
+  Calendar,
+  FileText,
+  Loader2,
+  Trash2,
+} from 'lucide-react';
 import { useContentStore } from '@/store';
-import { useAllCoursesMetadata, useDocumentById } from '@/hooks/useContent';
+import {
+  useAllCoursesMetadata,
+  useDeleteCourse,
+  useDocumentById,
+} from '@/hooks/useContent';
 import type { ContentHistory } from '@/types/content.types';
 
 export const ContentHistorySidebar = ({ onSelectContent, currentContent }) => {
@@ -153,9 +164,32 @@ export const ContentHistorySidebar = ({ onSelectContent, currentContent }) => {
     useContentStore();
 
   const { data: courses = [], isLoading } = useAllCoursesMetadata();
+  const deleteCourseMutation = useDeleteCourse();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const { data: selectedCourse, isLoading: isCourseLoading } =
     useDocumentById(selectedId);
+
+  const handleDeleteCourse = async (
+    event: React.MouseEvent<HTMLButtonElement>,
+    courseId: string
+  ) => {
+    event.stopPropagation();
+    if (!courseId || isCourseLoading || deleteCourseMutation.isLoading) return;
+
+    const shouldDelete = window.confirm('Delete this course from history?');
+    if (!shouldDelete) return;
+
+    setDeletingId(courseId);
+    try {
+      await deleteCourseMutation.mutateAsync(courseId);
+      if (selectedId === courseId) setSelectedId(null);
+    } catch (error) {
+      console.error('Failed to delete course:', error);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     if (
@@ -257,21 +291,44 @@ export const ContentHistorySidebar = ({ onSelectContent, currentContent }) => {
               <div className="space-y-3">
                 {courses.map((content) => {
                   const isThisLoading = selectedId === content.id && isCourseLoading;
+                  const isDeletingThis = deletingId === content.id;
                   return (
                     <div
                       key={content.id}
-                      onClick={() => !isCourseLoading && setSelectedId(content.id)}
+                      onClick={() =>
+                        !isCourseLoading &&
+                        !deleteCourseMutation.isLoading &&
+                        setSelectedId(content.id)
+                      }
                       className={`group relative bg-muted/10 rounded-xl p-3 border border-muted/30 shadow-sm hover:shadow-md hover:border-primary/40 hover:bg-muted/20 transition-all backdrop-blur-sm ${
-                        isCourseLoading ? 'cursor-wait opacity-60' : 'cursor-pointer'
+                        isCourseLoading || deleteCourseMutation.isLoading
+                          ? 'cursor-wait opacity-60'
+                          : 'cursor-pointer'
                       }`}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <h4 className="font-semibold text-sm text-foreground line-clamp-2 pr-2">
                           {content.title ?? content.topic ?? content.id}
                         </h4>
-                        {isThisLoading && (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-                        )}
+                        <div className="flex items-center gap-1">
+                          {isThisLoading && (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(event) => handleDeleteCourse(event, content.id)}
+                            disabled={isDeletingThis}
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            aria-label={`Delete course ${content.title ?? content.id}`}
+                          >
+                            {isDeletingThis ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70 mt-1 pt-1 border-t border-muted/20">
                         <Calendar className="w-3.5 h-3.5" />
