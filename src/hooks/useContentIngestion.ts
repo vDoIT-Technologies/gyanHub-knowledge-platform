@@ -30,21 +30,38 @@ export interface ContentIngestionResponse {
 export function useContentIngestion() {
   return useMutation<ContentIngestionResponse, Error, ContentIngestionParams>({
     mutationFn: async ({ teacherId, title, text, files }: ContentIngestionParams) => {
-      if (files && files.length > 0) {
-        throw new Error(
-          'File upload ingestion is not configured (backend endpoint missing). Paste text instead.'
-        );
+      const hasFiles = !!(files && files.length > 0);
+      const hasText = !!text?.trim();
+
+      if (hasFiles && hasText) {
+        throw new Error('Please provide either text or documents, not both.');
       }
 
-      if (!text?.trim()) {
-        throw new Error('Text is required.');
+      if (!hasFiles && !hasText) {
+        throw new Error('Please provide text or at least one document.');
+      }
+
+      const ownerId = teacherId || 'da8cd9f7-b56a-4d95-b080-6391c29a0c27';
+
+      if (hasFiles) {
+        const formData = new FormData();
+        for (const file of files || []) {
+          formData.append('files', file);
+        }
+        if (title?.trim()) formData.append('title', title.trim());
+        formData.append('ownerId', ownerId);
+        formData.append('generate_embeddings', 'true');
+
+        const res = await api.post('/documents', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return (res.data || {}) as ContentIngestionResponse;
       }
 
       const res = await api.post('/documents', {
         text: text.trim(),
-        ...(teacherId ? { ownerId: teacherId } : {}),
+        ownerId,
         ...(title?.trim() ? { title: title.trim() } : {}),
-        ownerId:"da8cd9f7-b56a-4d95-b080-6391c29a0c27",
         generate_embeddings: true,
       });
 

@@ -99,13 +99,23 @@ export function ContentIngestionTab() {
     e.target.value = '';
   };
 
-  const canSubmit = (text.trim().length > 0 || files.length > 0) && !ingestMutation.isLoading;
+  const hasText = text.trim().length > 0;
+  const hasFiles = files.length > 0;
+  const canSubmit = (hasText || hasFiles) && !ingestMutation.isLoading;
 
   const handleSubmit = async () => {
-    if (!text.trim() && files.length === 0) {
+    if (!hasText && !hasFiles) {
       toast({
         title: 'Nothing to add',
         description: 'Paste some text or upload at least one document.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (hasText && hasFiles) {
+      toast({
+        title: 'Choose one input',
+        description: 'Please add either text or documents, not both.',
         variant: 'destructive',
       });
       return;
@@ -115,7 +125,7 @@ export function ContentIngestionTab() {
       await ingestMutation.mutateAsync({
         teacherId: selectedTeacherId || null,
         title: title.trim() || undefined,
-        text: text.trim() || undefined,
+        text: hasText ? text.trim() : undefined,
         ownerId: "da8cd9f7-b56a-4d95-b080-6391c29a0c27",
         files,
       });
@@ -208,7 +218,7 @@ export function ContentIngestionTab() {
             disabled={ingestMutation.isLoading}
           />
           <p className="text-xs text-muted-foreground">
-            Supported: {ACCEPTED_EXTENSIONS.join(', ')}.
+            Supported: {ACCEPTED_EXTENSIONS.join(', ')}. Please use either text or documents.
           </p>
 
           {files.length > 0 && (
@@ -298,4 +308,3 @@ export function ContentIngestionTab() {
     </div>
   );
 }
-

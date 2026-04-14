@@ -209,3 +209,22 @@ export function useAllCoursesMetadata() {
     staleTime: 1000 * 30,
   });
 }
+
+// ─── Delete a course by ID (DELETE /courses/:id) ────────────────────────────
+export function useDeleteCourse() {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, string>({
+    mutationFn: async (courseId: string) => {
+      if (!courseId) throw new Error('Missing course id');
+      await api.delete(`/courses/${courseId}`);
+    },
+    onSuccess: (_, courseId) => {
+      queryClient.invalidateQueries({ queryKey: ['content', 'history'] });
+      queryClient.removeQueries({ queryKey: ['course', courseId] });
+    },
+    onError: (err: Error) => {
+      console.error('[useDeleteCourse] error:', err);
+    },
+  });
+}
