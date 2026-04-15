@@ -93,9 +93,11 @@ const ChatBox = ({ personality, isImageLoading, onSophiaMessage }) => {
 
   const fetchChatHistory = async (sessionId) => {
     try {
-      const response = await api.get(
-        `${import.meta.env.VITE_API_BASE_URL}/chat/session-history/${sessionId}`
-      );
+      // Use relative path assuming 'api' instance has baseURL configured.
+      // Also explicit withCredentials if not set globally.
+      const response = await api.get(`/chat/session-history/${sessionId}`, {
+        withCredentials: true
+      });
       const data = response.data.data;
       return data.history;
     } catch (error) {
@@ -236,13 +238,12 @@ const ChatBox = ({ personality, isImageLoading, onSophiaMessage }) => {
 
   const createNewSession = async () => {
     try {
-      const response = await api.post(
-        `${import.meta.env.VITE_API_BASE_URL}/chat/create-session`,
-        {
-          userId: user.userId || user.id,
-          personalityId: personality?.personalityId,
-        }
-      );
+      const response = await api.post(`/chat/create-session`, {
+        userId: user.userId || user.id,
+        personalityId: personality?.personalityId,
+      }, {
+        withCredentials: true
+      });
       const newUrl = `${window.location.origin}/chat/${personality?.personalityId}/${response?.data?.data?.id}`;
       window.history.pushState({ path: newUrl }, "", newUrl);
       return { sessionId: response.data.data.id, error: null };
@@ -332,13 +333,16 @@ const ChatBox = ({ personality, isImageLoading, onSophiaMessage }) => {
   };
 
   useEffect(() => {
-    connectWebSocket();
+    // Only connect if there isn't an active socket or if it's closed
+    if (!socketRef.current || socketRef.current.readyState === WebSocket.CLOSED) {
+      connectWebSocket();
+    }
     return () => {
-      if (socketRef.current) {
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
         socketRef.current.close();
       }
     };
-  }, []);
+  }, [currentSessionId]); // Reconnect if session changes
 
   const handleDeleteClick = () => {
     setIsModalOpen(true);
