@@ -263,6 +263,11 @@ const ContentPage = () => {
       return;
     }
 
+    if (!selectedTeacherId) {
+      alert('Please select a teacher before generating content.');
+      return;
+    }
+
     try {
       // mutateAsync drives isPending = true while awaiting
       const response = await contentMutation.mutateAsync({
