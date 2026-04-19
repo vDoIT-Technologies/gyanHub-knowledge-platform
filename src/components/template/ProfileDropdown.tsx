@@ -94,7 +94,10 @@ export function ProfileDropdown() {
           </Button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent className=" w-56 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-gray-600/80" align="end">
+        <DropdownMenuContent
+          className="w-56 border-border/80 bg-popover/95 backdrop-blur-sm"
+          align="end"
+        >
           <DropdownMenuItem onClick={() => navigate("/profile")}>
             My Account
           </DropdownMenuItem>
