@@ -24,15 +24,15 @@ export default function LogoutModal({
 
   return (
     <Dialog open={logoutModalOpen} onOpenChange={setLogoutModalOpen}>
-      <DialogContent className="sm:max-w-xl h-72 md:h-80 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-gray-600/80">
+      <DialogContent className="sm:max-w-xl h-72 md:h-80 bg-secondary border-muted/30">
         <DialogHeader>
           <div className="flex flex-col items-center justify-center gap-4">
-            <DialogTitle className="text-center text-white text-2xl md:text-3xl">
+            <DialogTitle className="text-center text-foreground text-2xl md:text-3xl">
               Log out
             </DialogTitle>
 
-            <FiLogOut className="text-red-500 text-4xl md:text-5xl" />
-            <p className="text-center text-gray-300 ">
+            <FiLogOut className="text-primary text-4xl md:text-5xl" />
+            <p className="text-center text-muted-foreground ">
               Are you sure you want to log out?
             </p>
           </div>
@@ -51,7 +51,7 @@ export default function LogoutModal({
           <Button
             type="button"
             variant="outline"
-            className="px-4 py-2 min-w-28 bg-red-500 text-white hover:bg-red-700"
+            className="px-4 py-2 min-w-28 border-primary/40 bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"
             onClick={handleLogout}
           >
             Log out

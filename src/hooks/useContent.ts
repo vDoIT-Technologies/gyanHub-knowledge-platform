@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from 'react-query';
+import axios from 'axios';
 import api from '@/services'; // your axios/fetch instance
 import type { Slide } from '@/types/content.types';
 
@@ -142,30 +143,56 @@ const toContentResponse = (
   return { success: true, id: doc.id, title, slides };
 };
 
+const getErrorMessage = (error: unknown): string => {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data;
+
+    if (typeof data === 'string' && data.trim()) return data;
+
+    if (data && typeof data === 'object') {
+      const record = data as Record<string, unknown>;
+      const message =
+        (typeof record.message === 'string' && record.message) ||
+        (typeof record.error === 'string' && record.error) ||
+        (typeof record.detail === 'string' && record.detail);
+
+      if (message) return message;
+    }
+  }
+
+  if (error instanceof Error && error.message) return error.message;
+
+  return 'Failed to generate content. Please try again or check your connection.';
+};
+
 // ─── Generate content as a course (POST /courses then GET /courses/:id) ───────
 export function useContentGeneration() {
   const queryClient = useQueryClient();
 
   return useMutation<CourseResponse, Error, GenerateContentParams>({
     mutationFn: async ({ topic, num_slides, teacherId }: GenerateContentParams) => {
-      // Step 1: Create course
-      const { data: createData } = await api.post('/courses', {
-        topic,
-        num_slides: Number(num_slides),
-        ...(teacherId ? { teacherId } : {}),
-      });
+      try {
+        // Step 1: Create course
+        const { data: createData } = await api.post('/courses', {
+          topic,
+          num_slides: Number(num_slides),
+          ...(teacherId ? { teacherId } : {}),
+        });
 
-      const documentId = extractDocumentId(createData as DocumentCreateResponse);
-      if (!documentId) throw new Error('No document id returned from server');
+        const documentId = extractDocumentId(createData as DocumentCreateResponse);
+        if (!documentId) throw new Error('No document id returned from server');
 
-      // Step 2: Fetch the full course by ID
-      const { data: docData } = await api.get('/courses', {
-        params: { course_id: documentId }
-      });
-      const normalized = normalizeDocument(docData as DocumentGetResponse);
-      if (!normalized) throw new Error('Failed to fetch created document');
+        // Step 2: Fetch the full course by ID
+        const { data: docData } = await api.get('/courses', {
+          params: { course_id: documentId }
+        });
+        const normalized = normalizeDocument(docData as DocumentGetResponse);
+        if (!normalized) throw new Error('Failed to fetch created document');
 
-      return toContentResponse(normalized, topic);
+        return toContentResponse(normalized, topic);
+      } catch (error) {
+        throw new Error(getErrorMessage(error));
+      }
     },
     onSuccess: () => {
       // Keep hook-compatible invalidation point (sidebar/history uses local store today).

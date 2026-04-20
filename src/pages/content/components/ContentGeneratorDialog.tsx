@@ -31,6 +31,7 @@ interface ContentGeneratorDialogProps {
   setSelectedTeacherId: (id: string) => void;
   isPending: boolean;
   isError: boolean;
+  errorMessage?: string;
 }
 
 export const ContentGeneratorDialog: React.FC<ContentGeneratorDialogProps> = ({
@@ -46,6 +47,7 @@ export const ContentGeneratorDialog: React.FC<ContentGeneratorDialogProps> = ({
   setSelectedTeacherId,
   isPending,
   isError,
+  errorMessage,
 }) => {
   const [teachers, setTeachers] = React.useState<AvatarTeacherPublic[]>([]);
   const [isTeachersLoading, setIsTeachersLoading] = React.useState(false);
@@ -245,8 +247,7 @@ export const ContentGeneratorDialog: React.FC<ContentGeneratorDialogProps> = ({
           {/* Error Message */}
           {isError && (
             <div className="p-3 rounded-lg bg-destructive/20 text-destructive-foreground text-sm text-center border border-destructive/30">
-              Failed to generate content. Please try again or check your
-              connection.
+              {errorMessage || "Failed to generate content. Please try again or check your connection."}
             </div>
           )}
 

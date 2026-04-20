@@ -363,6 +363,7 @@ const ContentPage = () => {
               onViewHistory={() => setHistorySidebarOpen(true)}
               isPending={contentMutation.isLoading}
               isError={contentMutation.isError}
+              errorMessage={contentMutation.error?.message}
             />
 
             {!slides.length && (
