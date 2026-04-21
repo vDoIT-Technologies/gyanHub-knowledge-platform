@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import { useUserStore } from '@/store';
 import { apiGetAvatarTeachers, AvatarTeacherPublic } from '@/services/chat.api';
 import { useContentIngestion } from '@/hooks/useContentIngestion';
 
@@ -34,6 +35,7 @@ const ACCEPTED_EXTENSIONS = ['.txt', '.pdf', '.doc', '.docx'];
 
 export function ContentIngestionTab() {
   const ingestMutation = useContentIngestion();
+  const { user } = useUserStore();
 
   const [teachers, setTeachers] = React.useState<AvatarTeacherPublic[]>([]);
   const [isTeachersLoading, setIsTeachersLoading] = React.useState(false);
@@ -123,10 +125,10 @@ export function ContentIngestionTab() {
 
     try {
       await ingestMutation.mutateAsync({
-        teacherId: selectedTeacherId || null,
+        teacherId: selectedTeacherId || undefined,
         title: title.trim() || undefined,
         text: hasText ? text.trim() : undefined,
-        ownerId: "da8cd9f7-b56a-4d95-b080-6391c29a0c27",
+        ownerId: user?.userId || user?.id,
         files,
       });
 

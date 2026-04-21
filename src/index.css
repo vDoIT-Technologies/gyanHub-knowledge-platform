@@ -5,6 +5,30 @@
 
 @layer base {
   :root {
+    --background: 330 35% 98%;
+    --foreground: 337 30% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 337 30% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 337 30% 12%;
+    --primary: 337 76.1% 55.7%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 330 30% 94%;
+    --secondary-foreground: 337 30% 18%;
+    --muted: 330 20% 90%;
+    --muted-foreground: 337 15% 35%;
+    --accent: 330 30% 92%;
+    --accent-foreground: 337 30% 16%;
+    --destructive: 0 84% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 330 20% 82%;
+    --input: 0 0% 100%;
+    --ring: 337 76.1% 55.7%;
+    --radius: 0.5rem;
+    --chatBubble: 337 76.1% 55.7% 12%;
+  }
+
+  .dark {
     --background: 337 50% 5%;
     --foreground: 337 5% 90%;
     --card: 0 0% 100% 6%;
@@ -29,8 +53,6 @@
     /* input */
     --input: 0 0% 100% 100%;
     --ring: 337 76.1% 55.7%;
-    --radius: 0.5rem;
-    /* chatBubble pinkOpacity */
     --chatBubble: 337 76.1% 55.7% 15%;
   }
 }
@@ -39,10 +61,18 @@
   * {
     @apply border-border;
   }
+
+  html {
+    @apply bg-background;
+  }
+
   body {
-    @apply bg-gray-900 text-foreground;
+    @apply bg-background text-foreground;
     font-family: "Roboto", sans-serif;
-    background: rgba(11, 13, 21, 1);
+    background: hsl(var(--background));
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
     overflow: hidden auto;
   }
 

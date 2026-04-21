@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "../../../components/ui/select";
 import { Loader2, History, Sparkles, UserCircle } from "lucide-react";
+import { Alert, AlertDescription } from "../../../components/ui/alert";
 import { apiGetAvatarTeachers, AvatarTeacherPublic } from "@/services/chat.api";
 
 interface ContentGeneratorDialogProps {
@@ -30,6 +31,7 @@ interface ContentGeneratorDialogProps {
   setSelectedTeacherId: (id: string) => void;
   isPending: boolean;
   isError: boolean;
+  errorMessage?: string;
 }
 
 export const ContentGeneratorDialog: React.FC<ContentGeneratorDialogProps> = ({
@@ -45,9 +47,60 @@ export const ContentGeneratorDialog: React.FC<ContentGeneratorDialogProps> = ({
   setSelectedTeacherId,
   isPending,
   isError,
+  errorMessage,
 }) => {
   const [teachers, setTeachers] = React.useState<AvatarTeacherPublic[]>([]);
   const [isTeachersLoading, setIsTeachersLoading] = React.useState(false);
+  const [validationMessage, setValidationMessage] = React.useState("");
+
+  const teacherOptions = React.useMemo(() => {
+    const classifyTeacher = (teacher: AvatarTeacherPublic) => {
+      const haystack = [
+        teacher.name,
+        teacher.description ?? "",
+        ...(teacher.topics ?? []),
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      const isHealth = /dr\s*verma|health|healthcare|medical|wellness|doctor|nutrition|fitness/.test(
+        haystack
+      );
+
+      return isHealth ? "health" : "science";
+    };
+
+    const healthTeacher =
+      teachers.find((teacher) => classifyTeacher(teacher) === "health") ?? null;
+    const scienceTeacher =
+      teachers.find(
+        (teacher) =>
+          teacher.id !== healthTeacher?.id && classifyTeacher(teacher) === "science"
+      ) ?? null;
+
+    return [
+      healthTeacher
+        ? {
+            ...healthTeacher,
+            optionKey: "health" as const,
+            label: "Dr Asha Verma",
+            description: "healthcare coach",
+          }
+        : null,
+      scienceTeacher
+        ? {
+            ...scienceTeacher,
+            optionKey: "science" as const,
+            label: scienceTeacher.name || "Prof xx",
+            description: "science teacher",
+          }
+        : null,
+    ].filter(Boolean) as Array<AvatarTeacherPublic & {
+      optionKey: "health" | "science";
+      label: string;
+      description: string;
+    }>;
+  }, [teachers]);
 
   React.useEffect(() => {
     if (open) {
@@ -66,7 +119,29 @@ export const ContentGeneratorDialog: React.FC<ContentGeneratorDialogProps> = ({
     }
   }, [open]);
 
+  React.useEffect(() => {
+    if (!open) {
+      setValidationMessage("");
+      return;
+    }
+
+    if (selectedTeacherId && topic.trim()) {
+      setValidationMessage("");
+    }
+  }, [open, selectedTeacherId, topic]);
+
   const handleGenerate = () => {
+    if (!selectedTeacherId) {
+      setValidationMessage("Select a teacher before generating a course so the backend can use teacher-specific knowledge.");
+      return;
+    }
+
+    if (!topic.trim()) {
+      setValidationMessage("Enter or select a topic before generating.");
+      return;
+    }
+
+    setValidationMessage("");
     onGenerate();
   };
 
@@ -84,7 +159,7 @@ export const ContentGeneratorDialog: React.FC<ContentGeneratorDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-5 py-4">
-          {/* 1. Expertise Context (Teacher Selection) - NOW AT TOP */}
+          {/* 1. Expertise Context (Teacher Selection) */}
           <div className="space-y-2">
             <label
               htmlFor="teacherId"
@@ -94,86 +169,47 @@ export const ContentGeneratorDialog: React.FC<ContentGeneratorDialogProps> = ({
               Expertise Context (Teacher)
             </label>
             <Select
-              value={selectedTeacherId || "none"}
+              value={selectedTeacherId || undefined}
               onValueChange={(value) => {
-                const id = value === "none" ? "" : value;
-                setSelectedTeacherId(id);
-                // Reset topic when teacher changes to avoid confusion
-                if (id !== selectedTeacherId) setTopic("");
+                setSelectedTeacherId(value);
+                if (value !== selectedTeacherId) setTopic("");
+                setValidationMessage("");
               }}
               disabled={isPending || isTeachersLoading}
             >
               <SelectTrigger className="w-full bg-background/50 border-muted/50 text-foreground">
-                <SelectValue placeholder={isTeachersLoading ? "Loading teachers..." : "Generic Teaching Mode"} />
+                <SelectValue placeholder={isTeachersLoading ? "Loading teachers..." : "Select a teacher"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Generic Teaching Mode</SelectItem>
-                {teachers.map((teacher) => (
+                {teacherOptions.map((teacher) => (
                   <SelectItem key={teacher.id} value={teacher.id}>
-                    {teacher.name}
+                    {teacher.label} -- {teacher.description}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <p className="text-[0.7rem] text-muted-foreground/70 pl-6 italic">
-              * Choosing a teacher will use their specific knowledge base for this course.
+              * Pick the teacher first. Dr Asha Verma is for health topics, and the science teacher handles science and general topics.
             </p>
           </div>
 
-          {/* 2. Topic Selection - DYNAMIC DROPDOWN BASED ON TEACHER */}
-          <div className="space-y-4">
-            {selectedTeacherId && teachers.find(t => t.id === selectedTeacherId)?.topics?.length ? (
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground">
-                  Select a Lesson Topic
-                </label>
-                <Select
-                  value={teachers.find(t => t.id === selectedTeacherId)?.topics?.includes(topic) ? topic : (topic === "" ? "" : "custom")}
-                  onValueChange={(value) => {
-                    if (value === "custom") {
-                      // Keep it as 'custom' visually for a moment but clear the internal state to show input
-                      setTopic("");
-                    } else {
-                      setTopic(value);
-                    }
-                  }}
-                  disabled={isPending}
-                >
-                  <SelectTrigger className="w-full bg-background/50 border-muted/50 text-foreground">
-                    <SelectValue placeholder="-- Choose a Topic --" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teachers.find(t => t.id === selectedTeacherId)?.topics?.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {t}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="custom" className="text-primary font-medium italic">+ Use a Custom Topic</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : null}
-
-            {/* Topic Input - shown if Generic mode OR Custom Topic is desired in dropdown */}
-            {(!selectedTeacherId || (selectedTeacherId && !teachers.find(t => t.id === selectedTeacherId)?.topics?.includes(topic))) && (
-              <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                <label
-                  htmlFor="topic"
-                  className="block text-sm font-medium text-foreground"
-                >
-                  {selectedTeacherId ? "Enter Custom Topic Details" : "Topic of Interest"}
-                </label>
-                <input
-                  id="topic"
-                  type="text"
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  placeholder="e.g., Quantum Physics, Healthy Habits, Modern History..."
-                  className="w-full px-3 py-2.5 bg-background/50 border border-muted/50 rounded-lg text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                  disabled={isPending}
-                />
-              </div>
-            )}
+          {/* 2. Topic Input */}
+          <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+            <label
+              htmlFor="topic"
+              className="block text-sm font-medium text-foreground"
+            >
+              Topic of Interest
+            </label>
+            <input
+              id="topic"
+              type="text"
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              placeholder="e.g., Diabetes management, Human digestion, Gravity, Chemical reactions..."
+              className="w-full px-3 py-2.5 bg-background/50 border border-muted/50 rounded-lg text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+              disabled={isPending}
+            />
           </div>
 
           {/* 3. Number of Slides */}
@@ -202,11 +238,16 @@ export const ContentGeneratorDialog: React.FC<ContentGeneratorDialogProps> = ({
             </Select>
           </div>
 
+          {validationMessage && (
+            <Alert variant="destructive" className="border-destructive/30 bg-destructive/10">
+              <AlertDescription>{validationMessage}</AlertDescription>
+            </Alert>
+          )}
+
           {/* Error Message */}
           {isError && (
             <div className="p-3 rounded-lg bg-destructive/20 text-destructive-foreground text-sm text-center border border-destructive/30">
-              Failed to generate content. Please try again or check your
-              connection.
+              {errorMessage || "Failed to generate content. Please try again or check your connection."}
             </div>
           )}
 
@@ -214,7 +255,7 @@ export const ContentGeneratorDialog: React.FC<ContentGeneratorDialogProps> = ({
           <div className="flex flex-col gap-3 pt-2">
             <Button
               onClick={handleGenerate}
-              disabled={isPending || !topic.trim()}
+              disabled={isPending || !topic.trim() || !selectedTeacherId}
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
               size="lg"
             >

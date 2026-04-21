@@ -1,0 +1,1 @@
+const n=e=>{if(!e.response)return"Network error or no response received";const{data:s}=e.response;return(s==null?void 0:s.error)||(s==null?void 0:s.message)||e.message||"An unknown error occurred"},o=e=>{var s;return((s=e==null?void 0:e.data)==null?void 0:s.message)||(e==null?void 0:e.message)||"Success"};export{n as a,o as g};

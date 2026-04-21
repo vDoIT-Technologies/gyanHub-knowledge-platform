@@ -29,7 +29,7 @@ export interface ContentIngestionResponse {
  */
 export function useContentIngestion() {
   return useMutation<ContentIngestionResponse, Error, ContentIngestionParams>({
-    mutationFn: async ({ teacherId, title, text, files }: ContentIngestionParams) => {
+    mutationFn: async ({ teacherId, title, text, files, ownerId }: ContentIngestionParams) => {
       const hasFiles = !!(files && files.length > 0);
       const hasText = !!text?.trim();
 
@@ -41,15 +41,14 @@ export function useContentIngestion() {
         throw new Error('Please provide text or at least one document.');
       }
 
-      const ownerId = teacherId || 'da8cd9f7-b56a-4d95-b080-6391c29a0c27';
-
       if (hasFiles) {
         const formData = new FormData();
         for (const file of files || []) {
           formData.append('files', file);
         }
         if (title?.trim()) formData.append('title', title.trim());
-        formData.append('ownerId', ownerId);
+        if (ownerId) formData.append('ownerId', ownerId);
+        if (teacherId) formData.append('teacherId', teacherId);
         formData.append('generate_embeddings', 'true');
 
         const res = await api.post('/documents', formData, {
@@ -60,7 +59,8 @@ export function useContentIngestion() {
 
       const res = await api.post('/documents', {
         text: text.trim(),
-        ownerId,
+        ownerId: ownerId,
+        teacherId: teacherId || undefined,
         ...(title?.trim() ? { title: title.trim() } : {}),
         generate_embeddings: true,
       });

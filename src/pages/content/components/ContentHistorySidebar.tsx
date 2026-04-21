@@ -142,6 +142,14 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   BookOpen,
@@ -167,23 +175,35 @@ export const ContentHistorySidebar = ({ onSelectContent, currentContent }) => {
   const deleteCourseMutation = useDeleteCourse();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDeleteCourse, setPendingDeleteCourse] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
   const { data: selectedCourse, isLoading: isCourseLoading } =
     useDocumentById(selectedId);
 
-  const handleDeleteCourse = async (
+  const handleDeleteClick = (
     event: React.MouseEvent<HTMLButtonElement>,
     courseId: string
   ) => {
     event.stopPropagation();
     if (!courseId || isCourseLoading || deleteCourseMutation.isLoading) return;
 
-    const shouldDelete = window.confirm('Delete this course from history?');
-    if (!shouldDelete) return;
+    const targetCourse = courses.find((course) => course.id === courseId);
+    setPendingDeleteCourse({
+      id: courseId,
+      title: targetCourse?.title ?? targetCourse?.topic ?? 'this course',
+    });
+  };
 
-    setDeletingId(courseId);
+  const handleConfirmDelete = async () => {
+    if (!pendingDeleteCourse || isCourseLoading || deleteCourseMutation.isLoading) return;
+
+    setDeletingId(pendingDeleteCourse.id);
     try {
-      await deleteCourseMutation.mutateAsync(courseId);
-      if (selectedId === courseId) setSelectedId(null);
+      await deleteCourseMutation.mutateAsync(pendingDeleteCourse.id);
+      if (selectedId === pendingDeleteCourse.id) setSelectedId(null);
+      setPendingDeleteCourse(null);
     } catch (error) {
       console.error('Failed to delete course:', error);
     } finally {
@@ -235,6 +255,47 @@ export const ContentHistorySidebar = ({ onSelectContent, currentContent }) => {
         className="fixed inset-0 bg-black/50 z-30 lg:hidden"
         onClick={toggleHistorySidebar}
       />
+      <Dialog
+        open={Boolean(pendingDeleteCourse)}
+        onOpenChange={(open) => {
+          if (!open && !deleteCourseMutation.isLoading) {
+            setPendingDeleteCourse(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md bg-secondary border-muted/30">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Delete course</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              {`Delete "${pendingDeleteCourse?.title ?? 'this course'}" from history? This action cannot be undone.`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setPendingDeleteCourse(null)}
+              disabled={deleteCourseMutation.isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleConfirmDelete}
+              disabled={deleteCourseMutation.isLoading}
+              className="border-primary/40 bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
+            >
+              {deleteCourseMutation.isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="fixed inset-y-0 left-0 z-40 w-[85vw] max-w-80 lg:relative lg:z-auto lg:w-80 h-full flex flex-col bg-secondary/50 backdrop-blur-sm border-r border-muted/30 flex-shrink-0 transition-all duration-300">
         {/* Header */}
         <div className="p-4 border-b border-muted/30 flex items-center justify-between bg-secondary/70">
@@ -317,9 +378,9 @@ export const ContentHistorySidebar = ({ onSelectContent, currentContent }) => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={(event) => handleDeleteCourse(event, content.id)}
+                            onClick={(event) => handleDeleteClick(event, content.id)}
                             disabled={isDeletingThis}
-                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-primary hover:bg-primary/10"
                             aria-label={`Delete course ${content.title ?? content.id}`}
                           >
                             {isDeletingThis ? (

@@ -263,6 +263,11 @@ const ContentPage = () => {
       return;
     }
 
+    if (!selectedTeacherId) {
+      alert('Please select a teacher before generating content.');
+      return;
+    }
+
     try {
       // mutateAsync drives isPending = true while awaiting
       const response = await contentMutation.mutateAsync({
@@ -358,6 +363,7 @@ const ContentPage = () => {
               onViewHistory={() => setHistorySidebarOpen(true)}
               isPending={contentMutation.isLoading}
               isError={contentMutation.isError}
+              errorMessage={contentMutation.error?.message}
             />
 
             {!slides.length && (
